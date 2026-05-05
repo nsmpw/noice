@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27 fill=%27white%27>◉</text></svg>" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title></title>
+  <link rel="stylesheet" href="noice.css" />
+</head>
+<body>
+  <div id="custom-cursor">◉</div>
+
+  <!-- Hidden SVG filter for animated ink-bleed on playing dB number -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="ink-bleed" x="-30%" y="-30%" width="160%" height="160%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.5" numOctaves="3" seed="3" result="noise">
+          <animate attributeName="seed" from="1" to="100" dur="1.2s" repeatCount="indefinite"/>
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="6"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Three-column layout -->
+  <div id="three-col">
+
+    <!-- Left: dB numbers (auto-scrolling) -->
+    <div id="col-db"></div>
+
+    <!-- Center: nav (fixed) -->
+    <div id="col-nav">
+      <div class="nav-sec nav-sec-top">
+        <a href="#" class="nav-lk-lg" onclick="openAbout(); return false;">About</a>
+        <a href="#" class="nav-lk-lg" onclick="openSuggest(); return false;">Suggest</a>
+        <a href="#" class="nav-lk-lg" onclick="openDrawer(); return false;">Submit</a>
+      </div>
+
+      <div class="nav-sec nav-sec-browse">
+        <a href="index.html" class="nav-lk-sm" onclick="showAll(); return false;">All</a>
+        <a href="#" class="nav-lk-sm" onclick="startOnLoop(); return false;">On Loop</a>
+        <a href="#" class="nav-lk-sm" onclick="sortFeed('loud'); return false;">Loudest</a>
+        <a href="#" class="nav-lk-sm" onclick="sortFeed('quiet'); return false;">Quietest</a>
+        <a href="#" class="nav-lk-sm" onclick="sortFeed('recent'); return false;">Recent</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByDate('week'); return false;">This Week</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByDate('month'); return false;">This Month</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('Indoors'); return false;">Indoors</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('Outdoors'); return false;">Outdoors</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('Underground'); return false;">Underground</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('Parks'); return false;">Parks</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('Streets'); return false;">Streets</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('Restaurants'); return false;">Restaurants</a>
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('Cafes'); return false;">Cafes</a>
+        <span id="dynamic-categories"></span>
+      </div>
+
+      <div class="nav-sec nav-sec-surprise">
+        <a href="#" class="nav-lk-sm" id="scroll-toggle" onclick="toggleScroll(); return false;">Pause Scroll</a>
+      </div>
+
+      <div class="nav-sec nav-sec-mode">
+        <button id="mode-toggle" onclick="toggleMode()">
+          <svg id="mode-svg" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+            <path d="M30 5 A25 25 0 0 0 30 55 Z" fill="#000"/>
+            <path d="M30 5 A25 25 0 0 1 30 55 Z" fill="#fff"/>
+            <circle cx="30" cy="30" r="25" fill="none" stroke="currentColor" stroke-width="0.8"/>
+            <line x1="30" y1="5" x2="30" y2="55" stroke="currentColor" stroke-width="0.8"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="nav-sec nav-sec-year">
+        <div id="year-today" onclick="filterByYear()">Today!</div>
+        <div id="year-nav">
+          <button id="year-prev" onclick="changeYear(-1)">←</button>
+          <span id="year-display">2026</span>
+          <button id="year-next" onclick="changeYear(1)">→</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: info (auto-scrolling) -->
+    <div id="col-info"></div>
+
+  </div>
+
+  <!-- Submit drawer -->
+  <div class="left-overlay" id="submitOverlay" onclick="closeDrawer()">
+    <div class="left-drawer" onclick="event.stopPropagation()">
+      <button class="left-drawer-header" onclick="closeDrawer()">
+        <span class="x-row">✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕</span>
+      </button>
+      <div class="drawer-body">
+        <div class="suggest-intro">
+          <div class="suggest-title">Submit a Recording</div>
+          <div class="suggest-sub">Tell us where you were and what you heard.</div>
+        </div>
+        <div class="form-cols">
+          <div>
+            <div class="col-section">Location</div>
+            <div class="field-group"><label class="field-label">Address</label><input class="field-input" id="address" type="text" autocomplete="off" /></div>
+            <div class="field-row">
+              <div class="field-group"><label class="field-label">Place Name</label><input class="field-input" id="place-name" type="text" /></div>
+              <div class="field-group"><label class="field-label">Neighborhood</label><input class="field-input" id="neighborhood" type="text" /></div>
+            </div>
+
+            <div class="col-section mt">Sound</div>
+            <div class="field-row">
+              <div class="field-group"><label class="field-label">Date</label><input class="field-input" id="rec-date" type="text" placeholder="e.g. April 5, 2026" /></div>
+              <div class="field-group"><label class="field-label">Time</label><input class="field-input" id="rec-time" type="text" placeholder="e.g. 10:40" /></div>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Category (select all that apply)</label>
+              <div class="category-checkboxes" id="category-checkboxes">
+                <label class="cat-check"><input type="checkbox" class="submit-cat" value="Indoors" /> Indoors</label>
+                <label class="cat-check"><input type="checkbox" class="submit-cat" value="Outdoors" /> Outdoors</label>
+                <label class="cat-check"><input type="checkbox" class="submit-cat" value="Underground" /> Underground</label>
+                <label class="cat-check"><input type="checkbox" class="submit-cat" value="Parks" /> Parks</label>
+                <label class="cat-check"><input type="checkbox" class="submit-cat" value="Streets" /> Streets</label>
+                <label class="cat-check"><input type="checkbox" class="submit-cat" value="Restaurants" /> Restaurants</label>
+                <label class="cat-check"><input type="checkbox" class="submit-cat" value="Cafes" /> Cafes</label>
+              </div>
+              <div class="custom-cat-row">
+                <input class="field-input" id="custom-cat-input" type="text" placeholder="+ Add custom category" maxlength="20" />
+                <button type="button" class="custom-cat-add" onclick="addCustomCategory()">Add</button>
+              </div>
+            </div>
+            <div class="field-group"><label class="field-label">Describe in 3 Words</label><div class="field-row-3"><input class="field-input" id="q1" type="text" maxlength="20" /><input class="field-input" id="q2" type="text" maxlength="20" /><input class="field-input" id="q3" type="text" maxlength="20" /></div></div>
+
+            <div class="col-section mt">Recording</div>
+
+            <!-- Record box -->
+            <div class="field-group">
+              <label class="field-label">Record Now</label>
+              <div class="record-box" id="record-box">
+                <!-- Idle state -->
+                <div class="record-state record-idle" id="record-idle">
+                  <button type="button" class="record-btn" onclick="startRecording()">Start Recording</button>
+                  <div class="upload-note">Max 1 minute</div>
+                </div>
+
+                <!-- Recording state -->
+                <div class="record-state record-active" id="record-active" style="display:none">
+                  <div class="record-indicator">
+                    <span class="record-dot"></span>
+                    <span class="record-timer" id="record-timer">00:00</span>
+                  </div>
+                  <button type="button" class="record-btn record-btn-stop" onclick="stopRecording()">Stop Recording</button>
+                </div>
+
+                <!-- Preview state -->
+                <div class="record-state record-preview" id="record-preview" style="display:none">
+                  <audio id="record-playback" controls class="record-audio"></audio>
+                  <div class="record-actions">
+                    <button type="button" class="record-btn" onclick="reRecord()">Re-record</button>
+                    <button type="button" class="record-btn" onclick="deleteRecording()">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload box -->
+            <div class="field-group">
+              <label class="field-label">Upload a File</label>
+              <div class="upload-box"><input type="file" accept=".mp3,audio/mpeg" id="audio-input" onchange="handleFile(this)" /><div class="upload-label">Drop or click to upload</div><div class="upload-note">MP3 · Max 1 minute</div><div class="upload-filename" id="upload-filename"></div></div>
+            </div>
+
+            <div class="field-group" style="margin-top:0.85rem">
+              <label class="field-label">Decibels (Auto-detected)</label>
+              <input class="field-input" id="db-level" type="text" placeholder="Upload or record to detect" readonly />
+            </div>
+
+            <div class="col-section mt">Photo</div>
+            <div class="field-group">
+              <div class="upload-box"><input type="file" accept="image/*" id="photo-input" onchange="handlePhotoFile(this)" /><div class="upload-label">Drop or click to upload</div><div class="upload-note">JPG, PNG</div><div class="upload-filename" id="upload-photo-filename"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="submit-msg" id="submit-msg"></div>
+      </div>
+      <!-- Sticky orange SUBMIT footer -->
+      <button class="left-drawer-footer" id="submit-btn" onclick="handleSubmit()">
+        <span class="submit-row">Submit</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- About drawer -->
+  <div class="left-overlay" id="aboutOverlay" onclick="closeAbout()">
+    <div class="left-drawer" onclick="event.stopPropagation()">
+      <button class="left-drawer-header" onclick="closeAbout()">
+        <span class="x-row">✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕</span>
+      </button>
+      <div class="about-drawer-body">
+        <div class="suggest-intro about-intro">
+          <div class="suggest-title about-title-big">NOICE ?</div>
+        </div>
+        <p>One minute of audio. Three words. Uploaded by people who were actually&nbsp;there.</p>
+        <p>Cities are constantly documented through images, but sound is just as important in shaping how a place feels. Noise levels, conversations, traffic, music leaking from storefronts, train delays, construction, and moments of silence all contribute to a city's atmosphere in ways visuals alone cannot fully&nbsp;capture.</p>
+        <p>NOICE is a crowdsourced archive of New York City's sonic landscape, collecting everyday recordings from different neighborhoods, times, and experiences to create a more immediate and unfiltered portrait of life in the city. Each submission acts as a small record of presence, capturing how New York changes across different environments, communities, and moments in&nbsp;time.</p>
+      </div>
+      <button class="left-drawer-footer" onclick="closeAbout()">
+        <span class="x-row">✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Suggest drawer -->
+  <div class="left-overlay" id="suggestOverlay" onclick="closeSuggest()">
+    <div class="left-drawer" onclick="event.stopPropagation()">
+      <button class="left-drawer-header" onclick="closeSuggest()">
+        <span class="x-row">✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕</span>
+      </button>
+      <div class="drawer-body">
+        <!-- Intro -->
+        <div class="suggest-intro">
+          <div class="suggest-title">Community Picks</div>
+          <div class="suggest-sub">Vote on locations you want to hear, or suggest a new spot.</div>
+        </div>
+
+        <!-- Suggest a place button (expands form inline) -->
+        <button type="button" class="suggest-cta" onclick="toggleSuggestForm()">
+          <span class="suggest-cta-plus">+</span>
+          <span class="suggest-cta-label">Suggest a New Place</span>
+        </button>
+
+        <!-- Inline form (hidden by default) -->
+        <div class="suggest-form" id="suggest-form" style="display:none">
+          <div class="field-group"><label class="field-label">Place / Address</label><input class="field-input" id="suggest-place" type="text" /></div>
+          <div class="field-row">
+            <div class="field-group"><label class="field-label">Neighborhood</label><select class="field-input" id="suggest-neighborhood"></select></div>
+            <div class="field-group"><label class="field-label">Category</label><select class="field-input" id="suggest-category"></select></div>
+          </div>
+          <button type="button" class="record-btn" onclick="handleSuggest()">Submit Suggestion</button>
+          <div class="submit-msg" id="suggest-msg"></div>
+        </div>
+
+        <!-- Filters: neighborhood + category -->
+        <div class="suggest-filter-group">
+          <div class="suggest-filter-label">Neighborhood</div>
+          <div class="suggest-filter" id="suggest-filter-neighborhood"></div>
+        </div>
+        <div class="suggest-filter-group">
+          <div class="suggest-filter-label">Category</div>
+          <div class="suggest-filter" id="suggest-filter-category"></div>
+        </div>
+
+        <!-- Sort indicator -->
+        <div class="suggest-meta" id="suggest-meta">— spots · sorted by votes</div>
+
+        <!-- Ranked list -->
+        <div class="suggest-list" id="suggest-list"></div>
+      </div>
+      <button class="left-drawer-footer" onclick="closeSuggest()">
+        <span class="x-row">✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕✕</span>
+      </button>
+    </div>
+  </div>
+
+  <audio id="global-audio"></audio>
+  <script src="noice.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://uzxuzfeucdefjtfjtdbi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_y1ZiHOaMzQ7ss1IrDtswog_6FhmenXI';
+
+    // ─── Drawer open/close ────────────────────────────────
+    function openDrawer() { document.getElementById('submitOverlay').classList.add('open'); }
+    function closeDrawer() { document.getElementById('submitOverlay').classList.remove('open'); }
+    function openAbout() { document.getElementById('aboutOverlay').classList.add('open'); }
+    function closeAbout() { document.getElementById('aboutOverlay').classList.remove('open'); }
+    function openSuggest() { document.getElementById('suggestOverlay').classList.add('open'); }
+    function closeSuggest() { document.getElementById('suggestOverlay').classList.remove('open'); }
+
+    // ─── Geocode (silent — coordinates not displayed in form) ──
+    let geocodeTimer, latDMS = '', lonDMS = '';
+    document.getElementById('address').addEventListener('input', function () {
+      clearTimeout(geocodeTimer);
+      const val = this.value.trim();
+      if (!val) { latDMS = ''; lonDMS = ''; return; }
+      geocodeTimer = setTimeout(() => geocode(val), 800);
+    });
+    async function geocode(address) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`, { headers: { 'Accept-Language': 'en' } });
+        const data = await res.json();
+        if (!data.length) return;
+        const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+        latDMS = toDMS(lat, true); lonDMS = toDMS(lon, false);
+      } catch {}
+    }
+    function toDMS(decimal, isLat) {
+      const dir = isLat ? (decimal >= 0 ? 'N' : 'S') : (decimal >= 0 ? 'E' : 'W');
+      const abs = Math.abs(decimal), deg = Math.floor(abs), min = Math.floor((abs - deg) * 60), sec = Math.round((abs - deg - min / 60) * 3600);
+      return `${deg}°${String(min).padStart(2,'0')}′${String(sec).padStart(2,'0')}″${dir}`;
+    }
+
+    // ─── File upload + dB detection ───────────────────────
+    let audioFile = null;
+    let photoFile = null;
+
+    function handleFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+      // Clear any prior recording state (without wiping the file we just picked)
+      recordedChunks = [];
+      const playback = document.getElementById('record-playback');
+      if (playback) { playback.pause(); playback.src = ''; }
+      showRecordState('idle');
+      // Now assign and proceed
+      audioFile = file;
+      const el = document.getElementById('upload-filename');
+      el.textContent = file.name;
+      el.style.display = 'block';
+      analyzeDB(file);
+    }
+
+    function handlePhotoFile(input) {
+      photoFile = input.files[0];
+      if (!photoFile) return;
+      const el = document.getElementById('upload-photo-filename');
+      el.textContent = photoFile.name;
+      el.style.display = 'block';
+    }
+
+    async function analyzeDB(file) {
+      const dbEl = document.getElementById('db-level');
+      if (!dbEl) { console.error('[dB] db-level element missing'); return; }
+      try {
+        dbEl.value = 'Analyzing…';
+        console.log('[dB] analyzing file:', file.name, file.type, file.size + ' bytes');
+        const arrayBuffer = await file.arrayBuffer();
+        if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+          throw new Error('empty file');
+        }
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        if (!audioBuffer) {
+          throw new Error('decoder returned null');
+        }
+        if (!audioBuffer.numberOfChannels || audioBuffer.length === 0) {
+          throw new Error('audio has no channels');
+        }
+        let sumSquares = 0, totalSamples = 0;
+        for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+          const data = audioBuffer.getChannelData(c);
+          if (!data) continue;
+          for (let i = 0; i < data.length; i++) sumSquares += data[i] * data[i];
+          totalSamples += data.length;
+        }
+        if (totalSamples === 0) {
+          throw new Error('no audio samples found');
+        }
+        const rms = Math.sqrt(sumSquares / totalSamples);
+        const db = Math.round(20 * Math.log10(rms) + 90);
+        dbEl.value = db + ' dB';
+        console.log('[dB] detected:', db);
+        audioCtx.close();
+      } catch(e) {
+        console.error('[dB] decode failed:', e);
+        dbEl.value = 'Could not detect — ' + (e.message || 'invalid audio');
+      }
+    }
+
+    // ─── Live recording ───────────────────────────────────
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordTimerInterval = null;
+    let recordSeconds = 0;
+    const MAX_RECORD_SECONDS = 60;
+
+    function showRecordState(stateName) {
+      ['idle', 'active', 'preview'].forEach(s => {
+        const el = document.getElementById('record-' + s);
+        if (el) el.style.display = (s === stateName) ? 'flex' : 'none';
+      });
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordedChunks = [];
+        audioFile = null;
+        document.getElementById('audio-input').value = '';
+        const fnameEl = document.getElementById('upload-filename');
+        fnameEl.textContent = '';
+        fnameEl.style.display = 'none';
+
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+          audioFile = new File([blob], `recording-${Date.now()}.webm`, { type: 'audio/webm' });
+          const playback = document.getElementById('record-playback');
+          playback.src = URL.createObjectURL(blob);
+          showRecordState('preview');
+          analyzeDB(audioFile);
+        };
+
+        mediaRecorder.start();
+        recordSeconds = 0;
+        updateTimerDisplay();
+        showRecordState('active');
+        recordTimerInterval = setInterval(() => {
+          recordSeconds++;
+          updateTimerDisplay();
+          if (recordSeconds >= MAX_RECORD_SECONDS) stopRecording();
+        }, 1000);
+      } catch (err) {
+        alert('Could not access microphone: ' + err.message);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      if (recordTimerInterval) { clearInterval(recordTimerInterval); recordTimerInterval = null; }
+    }
+
+    function reRecord() { resetRecordingState(); startRecording(); }
+    function deleteRecording() { resetRecordingState(); showRecordState('idle'); }
+
+    function resetRecordingState() {
+      audioFile = null;
+      recordedChunks = [];
+      const playback = document.getElementById('record-playback');
+      if (playback) { playback.pause(); playback.src = ''; }
+      if (!document.getElementById('audio-input').value) {
+        document.getElementById('db-level').value = '';
+      }
+    }
+
+    function updateTimerDisplay() {
+      const mins = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+      const secs = String(recordSeconds % 60).padStart(2, '0');
+      const el = document.getElementById('record-timer');
+      if (el) el.textContent = `${mins}:${secs}`;
+    }
+
+    // ─── Submit ───────────────────────────────────────────
+    async function handleSubmit() {
+      const btn = document.getElementById('submit-btn');
+      const msg = document.getElementById('submit-msg');
+
+      if (!photoFile) {
+        msg.textContent = 'Please upload a photo';
+        msg.style.color = 'red';
+        msg.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.querySelector('.submit-row').textContent = 'Submitting…';
+      try {
+        let audioPath = null;
+        if (audioFile) {
+          const ext = audioFile.name.toLowerCase().endsWith('.webm') ? 'webm' : 'mp3';
+          const mimeType = ext === 'webm' ? 'audio/webm' : 'audio/mpeg';
+          const fileName = `${Date.now()}-${audioFile.name.replace(/\s/g,'-')}`;
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${fileName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': mimeType },
+            body: audioFile
+          });
+          if (uploadRes.ok) audioPath = fileName;
+        }
+        let photoPath = null;
+        if (photoFile) {
+          const photoName = `photos/${Date.now()}-${photoFile.name.replace(/\s/g,'-')}`;
+          const mimeType = photoFile.name.toLowerCase().endsWith('.jpg') || photoFile.name.toLowerCase().endsWith('.jpeg') ? 'image/jpeg' : photoFile.type;
+          const photoRes = await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${photoName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': mimeType, 'x-upsert': 'true' },
+            body: photoFile
+          });
+          if (photoRes.ok) photoPath = photoName;
+        }
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/recordings`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            place_name: document.getElementById('place-name').value,
+            address: document.getElementById('address').value,
+            neighborhood: document.getElementById('neighborhood').value,
+            lat_dms: latDMS, lon_dms: lonDMS,
+            quality_1: document.getElementById('q1').value,
+            quality_2: document.getElementById('q2').value,
+            quality_3: document.getElementById('q3').value,
+            context: null,
+            date_recorded: document.getElementById('rec-date').value || null,
+            time_recorded: document.getElementById('rec-time').value || null,
+            audio_path: audioPath,
+            db_level: document.getElementById('db-level').value || null,
+            photo_path: photoPath,
+            category: Array.from(document.querySelectorAll('.submit-cat:checked')).map(c => c.value)
+          })
+        });
+        if (insertRes.ok) {
+          msg.textContent = 'Thank you! Your recording is now in the archive.';
+          msg.style.color = 'var(--black)';
+          msg.style.display = 'block';
+          setTimeout(() => { closeDrawer(); resetSubmitForm(); loadRecordings(); }, 1500);
+        }
+        else { const err = await insertRes.json(); throw new Error(err.message || 'Insert failed'); }
+      } catch (e) {
+        msg.textContent = 'Error: ' + e.message; msg.style.display = 'block'; msg.style.color = 'red';
+        btn.disabled = false;
+        btn.querySelector('.submit-row').textContent = 'Submit';
+      }
+    }
+
+    function resetSubmitForm() {
+      ['address','place-name','neighborhood','rec-date','rec-time','q1','q2','q3','db-level'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('upload-filename').textContent = '';
+      document.getElementById('upload-filename').style.display = 'none';
+      document.getElementById('upload-photo-filename').textContent = '';
+      document.getElementById('upload-photo-filename').style.display = 'none';
+      document.getElementById('audio-input').value = '';
+      document.getElementById('photo-input').value = '';
+      document.querySelectorAll('.submit-cat').forEach(c => c.checked = false);
+      // Remove custom-added checkboxes (anything beyond the 7 built-ins)
+      const customCats = document.querySelectorAll('#category-checkboxes .cat-check');
+      customCats.forEach((label, i) => { if (i >= 7) label.remove(); });
+      const customInput = document.getElementById('custom-cat-input');
+      if (customInput) customInput.value = '';
+      document.getElementById('submit-msg').style.display = 'none';
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = false;
+      btn.querySelector('.submit-row').textContent = 'Submit';
+      audioFile = null;
+      photoFile = null;
+      latDMS = '';
+      lonDMS = '';
+      resetRecordingState();
+      showRecordState('idle');
+    }
+
+    // ─── Custom category support ────────────────────────
+    // Built-in categories that always show in the nav and submit form
+    const BUILTIN_CATEGORIES = ['Indoors', 'Outdoors', 'Underground', 'Parks', 'Streets', 'Restaurants', 'Cafes'];
+    // Words that should NOT appear as nav filter pills even if they're in DB
+    // (these conflict with sort buttons or are nav controls)
+    const RESERVED_NAV_WORDS = ['All', 'On Loop', 'Loudest', 'Quietest', 'Recent', 'This Week', 'This Month', 'Neighborhoods'];
+
+    function addCustomCategory() {
+      const input = document.getElementById('custom-cat-input');
+      const value = input.value.trim();
+      if (!value) return;
+      // Check if already exists in the checkboxes
+      const existing = document.querySelector(`.submit-cat[value="${value}"]`);
+      if (existing) {
+        existing.checked = true;
+        input.value = '';
+        return;
+      }
+      // Add a new checkbox, auto-checked
+      const wrap = document.getElementById('category-checkboxes');
+      const label = document.createElement('label');
+      label.className = 'cat-check';
+      label.innerHTML = `<input type="checkbox" class="submit-cat" value="${value}" checked /> ${value}`;
+      wrap.appendChild(label);
+      input.value = '';
+    }
+
+    // After loadRecordings, look at every recording's categories, dedupe, and render
+    // any user-created custom ones into the nav so they become filterable
+    function renderDynamicCategories() {
+      const container = document.getElementById('dynamic-categories');
+      if (!container) return;
+      const customSet = new Set();
+      const reservedLower = RESERVED_NAV_WORDS.map(w => w.toLowerCase());
+      allRecordings.forEach(r => {
+        if (!r.category) return;
+        const cats = Array.isArray(r.category) ? r.category : [r.category];
+        cats.forEach(c => {
+          if (!c) return;
+          const lc = c.toLowerCase();
+          if (BUILTIN_CATEGORIES.some(b => b.toLowerCase() === lc)) return;
+          if (reservedLower.includes(lc)) return;
+          // Capitalize for display consistency
+          const display = c.charAt(0).toUpperCase() + c.slice(1);
+          customSet.add(display);
+        });
+      });
+      container.innerHTML = Array.from(customSet).sort().map(cat => `
+        <a href="#" class="nav-lk-sm" onclick="filterByCategory('${cat.replace(/'/g, "\\'")}'); return false;">${cat}</a>
+      `).join('');
+    }
+
+    // ─── Suggest drawer: dummy data + voting ──────────────
+    const SUGGEST_PLACES = [
+      // Manhattan
+      { name: 'Times Square', neighborhood: 'Midtown', category: 'Streets', votes: 248 },
+      { name: 'Bryant Park Subway Station', neighborhood: 'Midtown', category: 'Subway', votes: 184 },
+      { name: 'Tompkins Square Park', neighborhood: 'East Village', category: 'Parks', votes: 142 },
+      { name: 'Joe\'s Coffee', neighborhood: 'Greenwich Village', category: 'Cafes', votes: 119 },
+      { name: 'Grand Central Main Concourse', neighborhood: 'Midtown', category: 'Indoors', votes: 108 },
+      { name: 'Joe\'s Pizza Carmine St', neighborhood: 'Greenwich Village', category: 'Restaurants', votes: 61 },
+      { name: 'Chelsea Market Hallway', neighborhood: 'Chelsea', category: 'Markets', votes: 54 },
+      { name: 'Mott Street Dim Sum', neighborhood: 'Chinatown', category: 'Restaurants', votes: 51 },
+      { name: 'Apollo Theater', neighborhood: 'Harlem', category: 'Indoors', votes: 47 },
+      { name: 'Washington Square Park', neighborhood: 'Greenwich Village', category: 'Parks', votes: 44 },
+      { name: 'Union Square Greenmarket', neighborhood: 'Union Square', category: 'Markets', votes: 41 },
+      { name: 'Soho Cobblestones', neighborhood: 'Soho', category: 'Streets', votes: 36 },
+      { name: 'Noho Bookstore Hum', neighborhood: 'Noho', category: 'Indoors', votes: 28 },
+      { name: 'Essex Market', neighborhood: 'Lower East Side', category: 'Markets', votes: 25 },
+      { name: 'Tribeca Sunday Morning', neighborhood: 'Tribeca', category: 'Streets', votes: 22 },
+      { name: 'Museum of Natural History', neighborhood: 'Upper West Side', category: 'Museum', votes: 76 },
+      { name: 'MoMA Atrium', neighborhood: 'Midtown', category: 'Museum', votes: 64 },
+      { name: 'Whitney Museum', neighborhood: 'Meatpacking', category: 'Museum', votes: 48 },
+      { name: 'Guggenheim Rotunda', neighborhood: 'Upper East Side', category: 'Museum', votes: 42 },
+      { name: 'Lincoln Center Plaza', neighborhood: 'Upper West Side', category: 'Outdoors', votes: 58 },
+      { name: 'Central Park Bow Bridge', neighborhood: 'Central Park', category: 'Parks', votes: 95 },
+      { name: 'Chelsea Galleries', neighborhood: 'Chelsea', category: 'Galleries', votes: 39 },
+      { name: 'Flatiron Plaza', neighborhood: 'Flatiron', category: 'Streets', votes: 32 },
+      { name: 'Madison Square Park', neighborhood: 'Flatiron', category: 'Parks', votes: 27 },
+      { name: 'Kips Bay AMC Lobby', neighborhood: 'Kips Bay', category: 'Indoors', votes: 18 },
+      { name: 'Murray Hill Korean BBQ', neighborhood: 'Murray Hill', category: 'Restaurants', votes: 16 },
+      { name: 'Hell\'s Kitchen 9th Ave', neighborhood: 'Hell\'s Kitchen', category: 'Streets', votes: 24 },
+      { name: 'Hudson Yards Vessel', neighborhood: 'Hudson Yards', category: 'Outdoors', votes: 21 },
+      { name: 'Roosevelt Island Tram', neighborhood: 'Roosevelt Island', category: 'Outdoors', votes: 15 },
+      { name: 'Inwood Park Trail', neighborhood: 'Inwood', category: 'Parks', votes: 12 },
+      { name: 'Washington Heights Subway', neighborhood: 'Washington Heights', category: 'Subway', votes: 14 },
+      { name: 'East Harlem 116th', neighborhood: 'East Harlem', category: 'Streets', votes: 11 },
+      { name: 'Stuyvesant Town Lawn', neighborhood: 'Stuyvesant Town', category: 'Outdoors', votes: 9 },
+      { name: 'Battery Park Ferry', neighborhood: 'Financial District', category: 'Outdoors', votes: 19 },
+      { name: 'Madison Square Garden', neighborhood: 'Midtown', category: 'Stadiums', votes: 33 },
+
+      // Brooklyn
+      { name: 'Coney Island Boardwalk', neighborhood: 'Coney Island', category: 'Outdoors', votes: 196 },
+      { name: 'Williamsburg Bridge Walkway', neighborhood: 'Williamsburg', category: 'Streets', votes: 167 },
+      { name: 'Domino Park', neighborhood: 'Williamsburg', category: 'Parks', votes: 87 },
+      { name: 'Smorgasburg', neighborhood: 'Williamsburg', category: 'Markets', votes: 73 },
+      { name: 'Prospect Park Loop', neighborhood: 'Park Slope', category: 'Parks', votes: 19 },
+      { name: 'Dumbo Under the Bridge', neighborhood: 'Dumbo', category: 'Streets', votes: 17 },
+      { name: 'Bushwick Warehouse', neighborhood: 'Bushwick', category: 'Indoors', votes: 14 },
+      { name: 'Brooklyn Museum Steps', neighborhood: 'Crown Heights', category: 'Museum', votes: 31 },
+      { name: 'Barclays Center', neighborhood: 'Fort Greene', category: 'Stadiums', votes: 26 },
+      { name: 'Atlantic Ave Subway Hub', neighborhood: 'Fort Greene', category: 'Subway', votes: 22 },
+      { name: 'Bedford Ave L Stop', neighborhood: 'Williamsburg', category: 'Subway', votes: 35 },
+      { name: 'Greenpoint Waterfront', neighborhood: 'Greenpoint', category: 'Outdoors', votes: 20 },
+      { name: 'Bed-Stuy Brownstone Block', neighborhood: 'Bed-Stuy', category: 'Streets', votes: 18 },
+
+      // Queens
+      { name: 'Astoria N/W Platform', neighborhood: 'Astoria', category: 'Subway', votes: 92 },
+      { name: 'Flushing Main Street', neighborhood: 'Flushing', category: 'Streets', votes: 42 },
+      { name: 'Rockaway Beach', neighborhood: 'Rockaway', category: 'Outdoors', votes: 29 },
+      { name: 'Citi Field', neighborhood: 'Flushing', category: 'Stadiums', votes: 23 },
+      { name: 'Jackson Heights 74th', neighborhood: 'Jackson Heights', category: 'Streets', votes: 17 },
+      { name: 'LIC Waterfront', neighborhood: 'Long Island City', category: 'Outdoors', votes: 25 },
+
+      // Bronx
+      { name: 'Arthur Avenue Market', neighborhood: 'Belmont', category: 'Markets', votes: 48 },
+      { name: 'Yankee Stadium', neighborhood: 'Concourse', category: 'Stadiums', votes: 33 },
+      { name: 'Bronx Zoo Bird House', neighborhood: 'Bronx Park', category: 'Outdoors', votes: 14 },
+
+      // Staten Island
+      { name: 'St. George Ferry Terminal', neighborhood: 'St. George', category: 'Indoors', votes: 38 },
+      { name: 'Snug Harbor Cultural Center', neighborhood: 'Livingston', category: 'Outdoors', votes: 21 },
+    ];
+
+    const SUGGEST_NEIGHBORHOODS = [
+      'All',
+      // Manhattan (south to north)
+      'Financial District', 'Tribeca', 'Soho', 'Noho', 'Chinatown', 'Lower East Side',
+      'East Village', 'Greenwich Village', 'Meatpacking', 'Chelsea', 'Flatiron',
+      'Union Square', 'Stuyvesant Town', 'Kips Bay', 'Murray Hill', 'Midtown',
+      'Hell\'s Kitchen', 'Hudson Yards', 'Central Park', 'Upper East Side', 'Upper West Side',
+      'Roosevelt Island', 'East Harlem', 'Harlem', 'Washington Heights', 'Inwood',
+      // Brooklyn
+      'Williamsburg', 'Greenpoint', 'Bed-Stuy', 'Bushwick', 'Dumbo', 'Fort Greene',
+      'Park Slope', 'Crown Heights', 'Coney Island',
+      // Queens
+      'Astoria', 'Long Island City', 'Jackson Heights', 'Flushing', 'Rockaway',
+      // Bronx
+      'Belmont', 'Concourse', 'Bronx Park',
+      // Staten Island
+      'St. George', 'Livingston'
+    ];
+
+    const SUGGEST_CATEGORIES = [
+      'All', 'Streets', 'Parks', 'Subway', 'Cafes', 'Restaurants',
+      'Markets', 'Museum', 'Galleries', 'Stadiums', 'Indoors', 'Outdoors'
+    ];
+
+    // Top picks shown by default; rest revealed by "More" toggle
+    const TOP_NEIGHBORHOODS = [
+      'All', 'Midtown', 'Greenwich Village', 'Williamsburg',
+      'Upper East Side', 'Soho', 'Chelsea'
+    ];
+    const TOP_CATEGORIES = [
+      'All', 'Streets', 'Parks', 'Subway', 'Restaurants', 'Museum'
+    ];
+
+    let suggestActiveNeighborhood = 'All';
+    let suggestActiveCategory = 'All';
+    let neighborhoodExpanded = false;
+    let categoryExpanded = false;
+    const userVotes = new Set();
+
+    function toggleSuggestForm() {
+      const form = document.getElementById('suggest-form');
+      form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    function renderSuggestFilter() {
+      const nWrap = document.getElementById('suggest-filter-neighborhood');
+      const cWrap = document.getElementById('suggest-filter-category');
+      if (!nWrap || !cWrap) return;
+
+      // Neighborhood pills — top picks first, plus active selection if hidden
+      const nVisible = neighborhoodExpanded
+        ? SUGGEST_NEIGHBORHOODS
+        : (TOP_NEIGHBORHOODS.includes(suggestActiveNeighborhood)
+            ? TOP_NEIGHBORHOODS
+            : [...TOP_NEIGHBORHOODS, suggestActiveNeighborhood]);
+      const nHidden = SUGGEST_NEIGHBORHOODS.length - TOP_NEIGHBORHOODS.length;
+      nWrap.innerHTML = nVisible.map(n => `
+        <button type="button" class="suggest-cat ${n === suggestActiveNeighborhood ? 'active' : ''}" onclick="setSuggestNeighborhood('${n.replace(/'/g, "\\'")}')">${n}</button>
+      `).join('') + (nHidden > 0 ? `
+        <button type="button" class="suggest-cat suggest-cat-more" onclick="toggleNeighborhoodExpand()">${neighborhoodExpanded ? '− Less' : `+ ${nHidden} More`}</button>
+      ` : '');
+
+      // Category pills
+      const cVisible = categoryExpanded
+        ? SUGGEST_CATEGORIES
+        : (TOP_CATEGORIES.includes(suggestActiveCategory)
+            ? TOP_CATEGORIES
+            : [...TOP_CATEGORIES, suggestActiveCategory]);
+      const cHidden = SUGGEST_CATEGORIES.length - TOP_CATEGORIES.length;
+      cWrap.innerHTML = cVisible.map(c => `
+        <button type="button" class="suggest-cat ${c === suggestActiveCategory ? 'active' : ''}" onclick="setSuggestCategory('${c.replace(/'/g, "\\'")}')">${c}</button>
+      `).join('') + (cHidden > 0 ? `
+        <button type="button" class="suggest-cat suggest-cat-more" onclick="toggleCategoryExpand()">${categoryExpanded ? '− Less' : `+ ${cHidden} More`}</button>
+      ` : '');
+    }
+
+    function toggleNeighborhoodExpand() {
+      neighborhoodExpanded = !neighborhoodExpanded;
+      renderSuggestFilter();
+    }
+
+    function toggleCategoryExpand() {
+      categoryExpanded = !categoryExpanded;
+      renderSuggestFilter();
+    }
+
+    function setSuggestNeighborhood(n) {
+      suggestActiveNeighborhood = n;
+      renderSuggestFilter();
+      renderSuggestList();
+    }
+
+    function setSuggestCategory(c) {
+      suggestActiveCategory = c;
+      renderSuggestFilter();
+      renderSuggestList();
+    }
+
+    function renderSuggestList() {
+      const filtered = SUGGEST_PLACES
+        .filter(p => suggestActiveNeighborhood === 'All' || p.neighborhood === suggestActiveNeighborhood)
+        .filter(p => suggestActiveCategory === 'All' || p.category === suggestActiveCategory)
+        .sort((a, b) => b.votes - a.votes);
+
+      const meta = document.getElementById('suggest-meta');
+      if (meta) meta.textContent = `${filtered.length} spot${filtered.length === 1 ? '' : 's'} · sorted by votes`;
+
+      const list = document.getElementById('suggest-list');
+      if (!list) return;
+      list.innerHTML = filtered.map((p, i) => `
+        <div class="suggest-item">
+          <div class="suggest-rank">${i + 1}</div>
+          <div class="suggest-info">
+            <div class="suggest-place-name">${p.name}</div>
+            <div class="suggest-place-meta">
+              <span class="suggest-neighborhood">${p.neighborhood}</span>
+              <span class="suggest-tag">${p.category}</span>
+            </div>
+          </div>
+          <button type="button" class="suggest-vote ${userVotes.has(p.name) ? 'voted' : ''}" onclick="upvote('${p.name.replace(/'/g, "\\'")}')">
+            <span class="suggest-vote-arrow">▲</span>
+            <span class="suggest-vote-count">${p.votes}</span>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function upvote(name) {
+      const place = SUGGEST_PLACES.find(p => p.name === name);
+      if (!place) return;
+      if (userVotes.has(name)) {
+        place.votes--;
+        userVotes.delete(name);
+      } else {
+        place.votes++;
+        userVotes.add(name);
+      }
+      renderSuggestList();
+    }
+
+    async function handleSuggest() {
+      const msg = document.getElementById('suggest-msg');
+      const placeInput = document.getElementById('suggest-place');
+      const neighSelect = document.getElementById('suggest-neighborhood');
+      const catSelect = document.getElementById('suggest-category');
+      const place = placeInput.value.trim();
+      if (!place) { msg.textContent = 'Please enter a place'; msg.style.color = 'red'; msg.style.display = 'block'; return; }
+
+      // Add the new suggestion to the list with 1 starting vote (the submitter's)
+      const newPlace = {
+        name: place,
+        neighborhood: neighSelect.value,
+        category: catSelect.value,
+        votes: 1
+      };
+      SUGGEST_PLACES.push(newPlace);
+      userVotes.add(newPlace.name); // submitter's implicit vote
+
+      // Show the suggestion immediately by switching filters to match
+      suggestActiveNeighborhood = newPlace.neighborhood;
+      suggestActiveCategory = newPlace.category;
+      renderSuggestFilter();
+      renderSuggestList();
+
+      msg.textContent = 'Added! Your suggestion is now in the list.';
+      msg.style.color = 'var(--black)';
+      msg.style.display = 'block';
+      setTimeout(() => {
+        placeInput.value = '';
+        msg.style.display = 'none';
+        document.getElementById('suggest-form').style.display = 'none';
+      }, 1500);
+    }
+
+    function populateSuggestDropdowns() {
+      const neighSelect = document.getElementById('suggest-neighborhood');
+      const catSelect = document.getElementById('suggest-category');
+      if (!neighSelect || !catSelect) return;
+      // Skip 'All' option for the form (default to first real value)
+      neighSelect.innerHTML = SUGGEST_NEIGHBORHOODS.filter(n => n !== 'All').map(n =>
+        `<option value="${n}">${n}</option>`).join('');
+      catSelect.innerHTML = SUGGEST_CATEGORIES.filter(c => c !== 'All').map(c =>
+        `<option value="${c}">${c}</option>`).join('');
+    }
+
+    // Initial render of the suggest list
+    populateSuggestDropdowns();
+    renderSuggestFilter();
+    renderSuggestList();
+
+    // ─── Feed ─────────────────────────────────────────────
+    let allRecordings = [];
+    let activeFilter = { sort: 'newest', category: null, dateRange: null };
+    let onLoopActive = false;
+
+    function sortFeed(val) {
+      activeFilter.sort = val || 'newest';
+      activeFilter.category = null;
+      activeFilter.dateRange = null;
+      onLoopActive = false;
+      applyFilters();
+    }
+
+    function filterByCategory(cat) {
+      activeFilter.category = cat;
+      activeFilter.sort = 'newest';
+      activeFilter.dateRange = null;
+      onLoopActive = false;
+      applyFilters();
+    }
+
+    function filterByDate(range) {
+      activeFilter.dateRange = range; // 'week' or 'month'
+      activeFilter.category = null;
+      activeFilter.sort = 'newest';
+      onLoopActive = false;
+      applyFilters();
+    }
+
+    function applyFilters() {
+      let result = [...allRecordings];
+      // Apply category filter
+      if (activeFilter.category) {
+        const target = activeFilter.category.toLowerCase();
+        result = result.filter(r => {
+          if (!r.category) return false;
+          if (Array.isArray(r.category)) {
+            return r.category.some(c => c && c.toLowerCase() === target);
+          }
+          return r.category.toLowerCase() === target;
+        });
+      }
+      // Apply date range filter
+      if (activeFilter.dateRange) {
+        const now = new Date();
+        const cutoff = new Date();
+        if (activeFilter.dateRange === 'week') cutoff.setDate(now.getDate() - 7);
+        else if (activeFilter.dateRange === 'month') cutoff.setDate(now.getDate() - 30);
+        result = result.filter(r => {
+          if (!r.created_at) return false;
+          return new Date(r.created_at) >= cutoff;
+        });
+      }
+      // Sorting
+      if (activeFilter.sort === 'loud' || activeFilter.sort === 'quiet') {
+        result.sort((a, b) => {
+          const aDb = parseInt(a.db_level) || 0;
+          const bDb = parseInt(b.db_level) || 0;
+          return activeFilter.sort === 'loud' ? bDb - aDb : aDb - bDb;
+        });
+      } else if (activeFilter.sort === 'recent' || activeFilter.sort === 'newest') {
+        // Already comes in created_at desc from Supabase, but re-sort defensively
+        result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      }
+      renderFeed(result);
+    }
+
+    function showAll() {
+      activeFilter = { sort: 'newest', category: null, dateRange: null };
+      onLoopActive = false;
+      applyFilters();
+    }
+
+    // ─── On Loop mode: pick a random recording, autoplay, repeat forever ───
+    function startOnLoop() {
+      if (!allRecordings.length) return;
+      onLoopActive = true;
+      // Reset visual filters but keep showing everything
+      activeFilter = { sort: 'newest', category: null, dateRange: null };
+      applyFilters();
+      playRandomRecording();
+    }
+
+    function playRandomRecording() {
+      if (!onLoopActive || !allRecordings.length) return;
+      // Pick a random recording that has audio
+      const playable = allRecordings.filter(r => r.audio_path);
+      if (!playable.length) {
+        console.warn('[onLoop] no recordings with audio');
+        return;
+      }
+      const random = playable[Math.floor(Math.random() * playable.length)];
+      console.log('[onLoop] picked:', random.place_name);
+      // Find the row by data-id (set in renderFeed)
+      const row = document.querySelector(`.info-row[data-id="${random.id}"]`);
+      if (!row) {
+        console.warn('[onLoop] row not found, retrying with another pick');
+        setTimeout(playRandomRecording, 200);
+        return;
+      }
+      const btn = row.querySelector('.action-btn');
+      if (!btn || btn.disabled) {
+        console.warn('[onLoop] no listen button');
+        setTimeout(playRandomRecording, 200);
+        return;
+      }
+      // Scroll into view, then click
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => btn.click(), 600);
+    }
+
+    function renderFeed(data) {
+      const colDb = document.getElementById('col-db');
+      const colInfo = document.getElementById('col-info');
+      if (!data.length) {
+        colDb.innerHTML = '<div class="col-empty"></div>';
+        colInfo.innerHTML = '<div class="col-empty"></div>';
+        return;
+      }
+
+      colDb.innerHTML = data.map(r => `
+        <div class="db-row" data-id="${r.id}" onclick="selectRow('${r.id}')">
+          <div class="db-num">${r.db_level || '—'}</div>
+        </div>`).join('');
+
+      colInfo.innerHTML = data.map(r => {
+        const audioPath = r.audio_path ? `${SUPABASE_URL}/storage/v1/object/public/recordings/${r.audio_path}` : null;
+        const photoUrl = r.photo_path ? `${SUPABASE_URL}/storage/v1/object/public/recordings/${r.photo_path}` : null;
+        const date = r.date_recorded || '';
+        const time = r.time_recorded ? r.time_recorded.slice(0,5) : '';
+        const qualities = [r.quality_1, r.quality_2, r.quality_3].filter(Boolean).join(' · ');
+        return `<div class="info-row" data-id="${r.id}" onclick="selectRow('${r.id}')">
+          <div class="card-header">
+            <span class="card-place">${r.place_name||''}</span>
+            <span class="card-neighborhood">${r.neighborhood||''}</span>
+          </div>
+          ${photoUrl ? `<div class="card-photo"><img src="${photoUrl}" alt="${r.place_name||''}" /></div>` : ''}
+          <div class="card-footer">
+            <div class="card-meta-wrap">
+              <div class="card-meta">${qualities}${date ? ' &nbsp;|&nbsp; '+date : ''}${time ? ' &nbsp;·&nbsp; '+time : ''}</div>
+              ${audioPath ? `<button class="action-btn" onclick="event.stopPropagation(); playAudio('${audioPath}', this)">Listen</button>` : `<button class="action-btn" disabled style="opacity:0.3">No audio</button>`}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      dbScrollPos = 0;
+      infoScrollPos = 0;
+      const syncHeights = () => {
+        const infoRows = document.querySelectorAll('.info-row');
+        const dbRows = document.querySelectorAll('.db-row');
+        infoRows.forEach((infoRow, i) => {
+          if (dbRows[i]) dbRows[i].style.height = infoRow.offsetHeight + 'px';
+        });
+      };
+      setTimeout(() => {
+        const imgs = document.querySelectorAll('.card-photo img');
+        if (imgs.length === 0) {
+          syncHeights();
+          initNoiseEffect();
+        } else {
+          let loaded = 0;
+          imgs.forEach(img => {
+            if (img.complete) {
+              loaded++;
+              if (loaded === imgs.length) { syncHeights(); initNoiseEffect(); }
+            } else {
+              img.addEventListener('load', () => {
+                loaded++;
+                if (loaded === imgs.length) { syncHeights(); initNoiseEffect(); }
+              });
+            }
+          });
+          setTimeout(() => { syncHeights(); initNoiseEffect(); }, 2000);
+        }
+        const info = document.getElementById('col-info');
+        if (info) infoScrollPos = info.scrollHeight - info.clientHeight;
+        // Only start the autoScroll loop once — subsequent renders shouldn't spawn duplicates
+        if (!window._autoScrollStarted) {
+          window._autoScrollStarted = true;
+          requestAnimationFrame(autoScroll);
+        }
+      }, 300);
+    }
+
+    function selectRow(id) {
+      document.querySelectorAll('.info-row').forEach(row => {
+        row.classList.toggle('active', row.dataset.id === id);
+      });
+
+      const infoRow = document.querySelector(`.info-row[data-id="${id}"]`);
+      const dbRow = document.querySelector(`.db-row[data-id="${id}"]`);
+      const colInfo = document.getElementById('col-info');
+      const colDb = document.getElementById('col-db');
+
+      selectingRow = true;
+      userScrollLocked = true;
+      dbPaused = true;
+      infoPaused = true;
+
+      const scrollBtn = document.getElementById('scroll-toggle');
+      if (scrollBtn) scrollBtn.textContent = 'Resume Scroll';
+
+      if (infoRow && colInfo) {
+        const target = infoRow.offsetTop - (colInfo.clientHeight / 2) + (infoRow.offsetHeight / 2);
+        colInfo.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+        setTimeout(() => { infoScrollPos = Math.max(0, target); colInfo.scrollTop = infoScrollPos; }, 800);
+      }
+
+      if (dbRow && colDb) {
+        const target = dbRow.offsetTop - (colDb.clientHeight / 2) + (dbRow.offsetHeight / 2);
+        colDb.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+        setTimeout(() => { dbScrollPos = Math.max(0, target); colDb.scrollTop = dbScrollPos; }, 800);
+      }
+
+      setTimeout(() => { selectingRow = false; }, 1000);
+    }
+
+    async function loadRecordings() {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/recordings?order=created_at.desc`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      const data = await res.json();
+      allRecordings = Array.isArray(data) ? data : [];
+      renderDynamicCategories();
+      if (urlSort) sortFeed(urlSort);
+      else applyFilters();
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSort = urlParams.get('sort');
+
+    let surpriseIndex = 0;
+
+    function surpriseMe() {
+      if (!allRecordings.length) return;
+      const shuffled = [...allRecordings].sort(() => Math.random() - 0.5);
+      surpriseIndex = 0;
+      playSurprise(shuffled);
+    }
+
+    function playSurprise(shuffled) {
+      if (surpriseIndex >= shuffled.length) surpriseIndex = 0;
+      const r = shuffled[surpriseIndex];
+      surpriseIndex++;
+      if (!r.audio_path) { playSurprise(shuffled); return; }
+      const src = `${SUPABASE_URL}/storage/v1/object/public/recordings/${r.audio_path}`;
+      const audio = document.getElementById('global-audio');
+      audio.src = src;
+      audio.play();
+      selectRow(r.id);
+      audio.onended = () => playSurprise(shuffled);
+    }
+
+    let currentYear = new Date().getFullYear();
+    document.getElementById('year-display').textContent = currentYear;
+
+    function changeYear(dir) {
+      currentYear += dir;
+      filterByYear();
+    }
+
+    function filterByYear() {
+      document.getElementById('year-display').textContent = currentYear;
+      const filtered = allRecordings.filter(r => {
+        if (!r.date_recorded) return false;
+        const year = new Date(r.date_recorded.replace(/-/g, '/')).getFullYear();
+        return year === currentYear;
+      });
+      renderFeed(filtered);
+    }
+
+    function initNoiseEffect() {
+      document.querySelectorAll('.card-photo').forEach(photo => {
+        if (photo.querySelector('.noise-canvas')) return;
+        const canvas = document.createElement('canvas');
+        canvas.className = 'noise-canvas';
+        photo.appendChild(canvas);
+      });
+    }
+
+    function startNoise(photo) {
+      if (!photo) return;
+      const canvas = photo.querySelector('.noise-canvas');
+      if (!canvas) return;
+      photo._noiseTarget = 0.7;
+      photo._noiseOpacity = photo._noiseOpacity || 0;
+
+      const draw = () => {
+        const img = photo.querySelector('img');
+        const w = img ? img.offsetWidth : photo.offsetWidth;
+        const h = img ? img.offsetHeight : photo.offsetHeight;
+        if (canvas.width !== w) canvas.width = w;
+        if (canvas.height !== h) canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(w, h);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          if (Math.random() > 0.45) {
+            const roll = Math.random();
+            if (roll < 0.25) {
+              // Orange particle (NOICE accent: #FF6040)
+              data[i] = 255; data[i+1] = 96; data[i+2] = 64;
+            } else if (roll < 0.625) {
+              // White
+              data[i] = 255; data[i+1] = 255; data[i+2] = 255;
+            } else {
+              // Black
+              data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+            }
+            data[i+3] = Math.random() * 190 + 50;
+          } else { data[i+3] = 0; }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        photo._noiseOpacity += (photo._noiseTarget - photo._noiseOpacity) * 0.08;
+        canvas.style.opacity = photo._noiseOpacity;
+        photo._noiseRaf = requestAnimationFrame(draw);
+      };
+      cancelAnimationFrame(photo._noiseRaf);
+      draw();
+    }
+
+    function stopNoise(photo) {
+      if (!photo) return;
+      photo._noiseTarget = 0;
+      setTimeout(() => {
+        cancelAnimationFrame(photo._noiseRaf);
+        const canvas = photo.querySelector('.noise-canvas');
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.style.opacity = 0;
+        }
+        photo._noiseOpacity = 0;
+      }, 600);
+    }
+
+    function toggleMode() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      const paths = document.querySelectorAll('#mode-svg path');
+      if (isDark) {
+        paths[0].setAttribute('fill', '#fff');
+        paths[1].setAttribute('fill', '#000');
+      } else {
+        paths[0].setAttribute('fill', '#000');
+        paths[1].setAttribute('fill', '#fff');
+      }
+    }
+
+    function toggleScroll() {
+      const btn = document.getElementById('scroll-toggle');
+      userScrollLocked = !userScrollLocked;
+      dbPaused = userScrollLocked;
+      infoPaused = userScrollLocked;
+      btn.textContent = userScrollLocked ? 'Resume Scroll' : 'Pause Scroll';
+    }
+
+    let dbScrollPos = 0;
+    let infoScrollPos = 0;
+    let dbPaused = false;
+    let infoPaused = false;
+    let userScrollLocked = false;
+    let selectingRow = false;
+    const DB_SPEED = 0.4;
+    const INFO_SPEED = 0.6;
+
+    function autoScroll() {
+      if (!window.audioScrollLocked) {
+        const db = document.getElementById('col-db');
+        const info = document.getElementById('col-info');
+
+        if (db && db.scrollHeight > db.clientHeight && !dbPaused) {
+          dbScrollPos += DB_SPEED;
+          if (dbScrollPos >= db.scrollHeight - db.clientHeight) dbScrollPos = 0;
+          db.scrollTop = dbScrollPos;
+        }
+
+        if (info && info.scrollHeight > info.clientHeight && !infoPaused) {
+          infoScrollPos -= INFO_SPEED;
+          if (infoScrollPos <= 0) infoScrollPos = info.scrollHeight - info.clientHeight;
+          info.scrollTop = infoScrollPos;
+        }
+      }
+      requestAnimationFrame(autoScroll);
+    }
+
+    const colDb = document.getElementById('col-db');
+    if (colDb) {
+      colDb.addEventListener('mouseenter', () => { if (!userScrollLocked && !selectingRow) dbPaused = true; });
+      colDb.addEventListener('mouseleave', () => { if (!userScrollLocked && !selectingRow) dbPaused = false; });
+      colDb.addEventListener('wheel', (e) => {
+        if (window.audioScrollLocked) e.preventDefault();
+        else { dbScrollPos = colDb.scrollTop; }
+      }, { passive: false });
+    }
+
+    const colInfo = document.getElementById('col-info');
+    if (colInfo) {
+      colInfo.addEventListener('mouseenter', () => { if (!userScrollLocked && !selectingRow) infoPaused = true; });
+      colInfo.addEventListener('mouseleave', () => {
+        if (!userScrollLocked && !selectingRow) {
+          infoPaused = false;
+          infoScrollPos = colInfo.scrollTop;
+        }
+      });
+      colInfo.addEventListener('wheel', (e) => {
+        if (window.audioScrollLocked) e.preventDefault();
+        else { infoScrollPos = colInfo.scrollTop; }
+      }, { passive: false });
+    }
+
+    loadRecordings();
+
+    // Toggle the bleed effect on dB numbers + photo images based on play/pause state.
+    // Orange background (.playing) is managed by your noice.js — we only manage .is-vibrating here.
+    (function() {
+      const audio = document.getElementById('global-audio');
+      if (!audio) return;
+
+      const addVibrating = () => {
+        // Add .is-vibrating to the dB row AND info-row whose .playing class is set
+        document.querySelectorAll('.db-row.playing').forEach(r => r.classList.add('is-vibrating'));
+        document.querySelectorAll('.info-row.playing, .info-row.active').forEach(r => r.classList.add('is-vibrating'));
+      };
+      const removeVibrating = () => {
+        document.querySelectorAll('.db-row.is-vibrating, .info-row.is-vibrating').forEach(r => r.classList.remove('is-vibrating'));
+      };
+
+      audio.addEventListener('play', addVibrating);
+      audio.addEventListener('playing', addVibrating);
+      audio.addEventListener('pause', removeVibrating);
+      audio.addEventListener('ended', removeVibrating);
+
+      // On Loop mode: when one recording ends, play the next random one
+      audio.addEventListener('ended', () => {
+        if (onLoopActive) {
+          // Small delay so noice.js's pause-handling finishes, then start next
+          setTimeout(playRandomRecording, 800);
+        }
+      });
+    })();
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Submit — NOICE</title>
+  <link rel="stylesheet" href="noice.css" />
+  <style>
+    .submit-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 100; display: flex; align-items: flex-start;
+      justify-content: center; opacity: 1; pointer-events: all;
+    }
+    .submit-drawer {
+      background: #fff; width: 80%; max-width: 820px;
+      overflow-y: auto; transform: translateY(0); opacity: 1; margin-top: 0;
+    }
+    .drawer-close {
+      position: sticky; top: 0; display: flex;
+      justify-content: space-between; align-items: center;
+      padding: 1rem 1.5rem; border-bottom: 1px solid #000;
+      background: #fff; z-index: 10;
+    }
+    .drawer-close-title { font-size: 0.5rem; font-weight: 300; letter-spacing: 0.25em; text-transform: uppercase; }
+    .drawer-close-btn { font-family: 'NewEdge', sans-serif; font-size: 1rem; background: none; border: none; cursor: none; color: #000; padding: 0; line-height: 1; }
+    .drawer-body { padding: 1.25rem 1.5rem 1.5rem; }
+    .coord-display {
+      width: 100%; font-size: 0.5rem; background: transparent;
+      border: none; border-bottom: 0.5px solid #000;
+      padding: 4px 0; display: block; color: #000;
+    }
+    .auth-notice { font-size: 0.4rem; letter-spacing: 0.12em; text-transform: uppercase; color: #aaa; margin-bottom: 1.5rem; display: none; }
+    .auth-notice a { color: #000; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div id="custom-cursor">◉</div>
+
+  <div class="submit-overlay">
+    <div class="submit-drawer">
+      <div class="drawer-close">
+        <div class="drawer-close-title">Submit a Recording</div>
+        <button class="drawer-close-btn" onclick="window.location.href='index.html'">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="auth-notice" id="auth-notice">
+          You need to <a href="login.html">log in</a> or <a href="signup.html">create an account</a> to submit.
+        </div>
+        <div class="form-cols">
+          <div>
+            <div class="col-section">Location</div>
+            <div class="field-group">
+              <label class="field-label">Address</label>
+              <input class="field-input" id="address" type="text" autocomplete="off" />
+            </div>
+            <div class="field-group">
+              <label class="field-label">Coordinates</label>
+              <span class="coord-display" id="coord-display">—</span>
+            </div>
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label">Place Name</label>
+                <input class="field-input" id="place-name" type="text" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Neighborhood</label>
+                <input class="field-input" id="neighborhood" type="text" />
+              </div>
+            </div>
+            <div class="col-section mt">When</div>
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label">Date</label>
+                <input class="field-input" id="rec-date" type="text" placeholder="e.g. Apr 5, 2026" />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Time</label>
+                <input class="field-input" id="rec-time" type="text" placeholder="e.g. 10:40" />
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="col-section">Sound</div>
+            <div class="field-group">
+              <label class="field-label">Describe in 3 Words</label>
+              <div class="field-row-3">
+                <input class="field-input" id="q1" type="text" maxlength="20" />
+                <input class="field-input" id="q2" type="text" maxlength="20" />
+                <input class="field-input" id="q3" type="text" maxlength="20" />
+              </div>
+            </div>
+            <div class="col-section mt">Recording</div>
+            <div class="field-group">
+              <div class="upload-box">
+                <input type="file" accept=".mp3,audio/mpeg" id="audio-input" onchange="handleFile(this)" />
+                <div class="upload-label">Drop or click to upload</div>
+                <div class="upload-note">MP3 · Max 1 minute</div>
+                <div class="upload-filename" id="upload-filename"></div>
+              </div>
+            </div>
+            <div class="field-group" style="margin-top:0.75rem">
+              <label class="field-label">Decibels (Auto-detected)</label>
+              <input class="field-input" id="db-level" type="text" placeholder="Upload audio to detect" readonly />
+            </div>
+            <div class="col-section mt">Photo (Optional)</div>
+            <div class="field-group">
+              <div class="upload-box">
+                <input type="file" accept="image/*" id="photo-input" onchange="handlePhotoFile(this)" />
+                <div class="upload-label">Drop or click to upload</div>
+                <div class="upload-note">JPG, PNG · Landscape preferred</div>
+                <div class="upload-filename" id="upload-photo-filename"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="submit-btn" id="submit-btn" onclick="handleSubmit()">Submit</button>
+        <div class="submit-msg" id="submit-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="noice.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://uzxuzfeucdefjtfjtdbi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_y1ZiHOaMzQ7ss1IrDtswog_6FhmenXI';
+
+    const session = JSON.parse(localStorage.getItem('noice_session') || 'null');
+    const storedHandle = localStorage.getItem('noice_handle') || '@nsmpw';
+
+    if (!session?.access_token) {
+      document.getElementById('auth-notice').style.display = 'block';
+      document.getElementById('submit-btn').disabled = true;
+    }
+
+    // ─── Geocode ──────────────────────────────────────────
+    let geocodeTimer, latDMS = '', lonDMS = '';
+    document.getElementById('address').addEventListener('input', function () {
+      clearTimeout(geocodeTimer);
+      const val = this.value.trim();
+      if (!val) { document.getElementById('coord-display').textContent = '—'; latDMS = ''; lonDMS = ''; return; }
+      geocodeTimer = setTimeout(() => geocode(val), 800);
+    });
+
+    async function geocode(address) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`, { headers: { 'Accept-Language': 'en' } });
+        const data = await res.json();
+        if (!data.length) return;
+        const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+        latDMS = toDMS(lat, true); lonDMS = toDMS(lon, false);
+        document.getElementById('coord-display').textContent = latDMS + '  ' + lonDMS;
+      } catch {}
+    }
+
+    function toDMS(decimal, isLat) {
+      const dir = isLat ? (decimal >= 0 ? 'N' : 'S') : (decimal >= 0 ? 'E' : 'W');
+      const abs = Math.abs(decimal), deg = Math.floor(abs), min = Math.floor((abs - deg) * 60), sec = Math.round((abs - deg - min / 60) * 3600);
+      return `${deg}°${String(min).padStart(2,'0')}′${String(sec).padStart(2,'0')}″${dir}`;
+    }
+
+    // ─── Audio upload + dB detection ─────────────────────
+    let audioFile = null;
+    function handleFile(input) {
+      audioFile = input.files[0];
+      if (!audioFile) return;
+      const el = document.getElementById('upload-filename');
+      el.textContent = audioFile.name;
+      el.style.display = 'block';
+      analyzeDB(audioFile);
+    }
+
+    async function analyzeDB(file) {
+      try {
+        const dbEl = document.getElementById('db-level');
+        dbEl.value = 'Analyzing…';
+        const arrayBuffer = await file.arrayBuffer();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        let sumSquares = 0, totalSamples = 0;
+        for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+          const data = audioBuffer.getChannelData(c);
+          for (let i = 0; i < data.length; i++) sumSquares += data[i] * data[i];
+          totalSamples += data.length;
+        }
+        const rms = Math.sqrt(sumSquares / totalSamples);
+        const db = Math.round(20 * Math.log10(rms) + 90);
+        dbEl.value = db + ' dB';
+        audioCtx.close();
+      } catch(e) { document.getElementById('db-level').value = 'Could not detect'; }
+    }
+
+    // ─── Photo upload ─────────────────────────────────────
+    let photoFile = null;
+    function handlePhotoFile(input) {
+      photoFile = input.files[0];
+      if (!photoFile) return;
+      const el = document.getElementById('upload-photo-filename');
+      el.textContent = photoFile.name;
+      el.style.display = 'block';
+    }
+
+    // ─── Submit ───────────────────────────────────────────
+    async function handleSubmit() {
+      if (!session?.access_token) { window.location.href = 'login.html'; return; }
+      const btn = document.getElementById('submit-btn');
+      const msg = document.getElementById('submit-msg');
+      btn.disabled = true;
+      btn.textContent = 'Submitting…';
+
+      try {
+        let audioPath = null;
+        if (audioFile) {
+          const fileName = `${Date.now()}-${audioFile.name.replace(/\s/g,'-')}`;
+          const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${fileName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'audio/mpeg' },
+            body: audioFile
+          });
+          if (uploadRes.ok) audioPath = fileName;
+        }
+
+        let photoPath = null;
+        if (photoFile) {
+          const photoName = `photos/${Date.now()}-${photoFile.name.replace(/\s/g,'-')}`;
+          console.log('Uploading photo:', photoName, photoFile.type, photoFile.size);
+          const photoRes = await fetch(`${SUPABASE_URL}/storage/v1/object/recordings/${photoName}`, {
+            method: 'POST',
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': photoFile.type },
+            body: photoFile
+          });
+          const photoJson = await photoRes.json();
+          console.log('Photo upload response:', photoRes.status, photoJson);
+          if (photoRes.ok) photoPath = photoName;
+        }
+
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/recordings`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            handle: storedHandle,
+            place_name: document.getElementById('place-name').value,
+            address: document.getElementById('address').value,
+            neighborhood: document.getElementById('neighborhood').value,
+            lat_dms: latDMS, lon_dms: lonDMS,
+            quality_1: document.getElementById('q1').value,
+            quality_2: document.getElementById('q2').value,
+            quality_3: document.getElementById('q3').value,
+            context: null,
+            date_recorded: document.getElementById('rec-date').value || null,
+            time_recorded: document.getElementById('rec-time').value || null,
+            audio_path: audioPath,
+            db_level: document.getElementById('db-level').value || null,
+            photo_path: photoPath,
+            user_id: session.user.id
+          })
+        });
+
+        if (insertRes.ok) {
+          window.location.href = 'index.html';
+        } else {
+          const err = await insertRes.json();
+          throw new Error(err.message || 'Insert failed');
+        }
+      } catch (e) {
+        msg.textContent = 'Error: ' + e.message;
+        msg.style.display = 'block';
+        msg.style.color = 'red';
+        btn.disabled = false;
+        btn.textContent = 'Submit';
+      }
+    }
+  </script>
+</body>
+</html>
